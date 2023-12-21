@@ -26,9 +26,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
+        - spec: cp38-musllinux_aarch64
+          foreign_arch: true
+          test_args: '{project}/src/c'
+        - spec: cp39-musllinux_aarch64
+          foreign_arch: true
+          test_args: '{project}/src/c'
+        - spec: cp310-musllinux_aarch64
+          foreign_arch: true
+          test_args: '{project}/src/c'
+        - spec: cp311-musllinux_aarch64
+          foreign_arch: true
+          test_args: '{project}/src/c'
         - spec: cp312-musllinux_aarch64
           foreign_arch: true
           test_args: '{project}/src/c'
+        - spec: cp313-musllinux_aarch64
+          foreign_arch: true
+          test_args: '{project}/src/c'
+          # HACK: private cibuildwheel with 3.13 prerelease support
+          cibw_version: https://github.com/nitzmahone/cibuildwheel/archive/refs/heads/py313_support.zip
+          # HACK: private manylinux_2_28 container build with 3.13 prerelease support
+          manylinux_img: quay.io/pypa/musllinux_1_2_aarch64:latest
 
     steps:
     - name: clone repo
@@ -53,11 +72,12 @@ jobs:
           make install && \
           ldconfig || true
         CIBW_ENVIRONMENT_PASS_LINUX: CFLAGS  # ensure that the build container can see our overridden build config
+        CIBW_MUSLLINUX_AARCH64_IMAGE: ${{ matrix.manylinux_img || '' }}
         CIBW_PRERELEASE_PYTHONS: 'True'
         CIBW_TEST_REQUIRES: pytest setuptools  # 3.12+ no longer includes distutils, just always ensure setuptools is present
         CIBW_TEST_COMMAND: PYTHONUNBUFFERED=1 python -m pytest ${{ matrix.test_args || '{project}' }}  # default to test all
       run: |
-        python -m pip install --upgrade cibuildwheel
+        python -m pip install --upgrade "${{ matrix.cibw_version || 'cibuildwheel' }}"
 
         # actually build libffi + wheel (using env tweaks above)
         python -m cibuildwheel --output-dir dist .
